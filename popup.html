@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <style>
+            body {
+                width: 300px;
+                padding: 16px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                color: #333;
+                background: #f8f9fa;
+            }
+            .time-select {
+                margin-bottom: 16px;
+            }
+            select {
+                width: 100%;
+                padding: 8px 12px;
+                margin-bottom: 12px;
+                background-color: white;
+                border: 1px solid #e0e3e7;
+                border-radius: 8px;
+                font-size: 14px;
+                color: #1a1a1a;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+            select:hover {
+                border-color: #1a73e8;
+            }
+            .custom-time {
+                margin-top: 12px;
+                background: white;
+                padding: 16px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            .custom-time input {
+                width: 180px;
+                padding: 6px 10px;
+                font-size: 13px;
+                border: 1px solid #e0e3e7;
+                border-radius: 6px;
+                color: #1a1a1a;
+                transition: all 0.2s ease;
+            }
+            .custom-time input:focus {
+                border-color: #1a73e8;
+                outline: none;
+                box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+            }
+            .custom-time label {
+                display: inline-block;
+                width: 80px;
+                margin-right: 8px;
+                font-size: 14px;
+                color: #555;
+            }
+            .status {
+                margin-top: 12px;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 13px;
+            }
+            .error {
+                background-color: #fef2f2;
+                color: #dc2626;
+                border: 1px solid #fecaca;
+            }
+            .success {
+                background-color: #f0fdf4;
+                color: #16a34a;
+                border: 1px solid #dcfce7;
+            }
+            button {
+                width: 100%;
+                padding: 10px;
+                background-color: #1a73e8;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+            button:hover {
+                background-color: #1557b0;
+            }
+            button:disabled {
+                background-color: #e0e3e7;
+                cursor: not-allowed;
+                box-shadow: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="time-select">
+            <select id="timeRange">
+                <option value="all">所有历史记录</option>
+                <option value="5m">最近 5 分钟</option>
+                <option value="15m">最近 15 分钟</option>
+                <option value="30m">最近 30 分钟</option>
+                <option value="1h">最近 1 小时</option>
+                <option value="3h">最近 3 小时</option>
+                <option value="6h">最近 6 小时</option>
+                <option value="12h">最近 12 小时</option>
+                <option value="24h">最近 24 小时</option>
+                <option value="custom">自定义时间范围</option>
+            </select>
+            <div id="customTime" class="custom-time" style="display: none;">
+                <div>
+                    <label>开始时间：</label>
+                    <input type="datetime-local" id="startTime" step="60">
+                </div>
+                <div style="margin-top: 5px;">
+                    <label>结束时间：</label>
+                    <input type="datetime-local" id="endTime" step="60">
+                </div>
+            </div>
+        </div>
+        <button id="clearHistory">清理历史会话</button>
+        <div id="status" class="status"></div>
+        <script src="popup.js"></script>
+    </body>
+</html>
