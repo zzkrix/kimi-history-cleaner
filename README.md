@@ -6,12 +6,11 @@
 
 - [x] 支持自定义时间段清理 kimi 历史会话记录。
 
-![example](./docs/unnamed.jpg)
+![](./docs/unnamed.jpg)
 
-<div style="display: flex; gap: 0; justify-content: flex-start; align-items: flex-start;">
-    <img src="./docs/usage-1.jpg" style="width: 60%; margin: 0; padding: 0;">
-    <img src="./docs/usage-2.jpg" style="width: 60%; margin: 0; padding: 0;">
-</div>
+| 清理所有 | 自定义时间段清理 |
+| -- | -- |
+|![](./docs/usage-1.jpg)|![](./docs/usage-2.jpg)|
 
 ## 安装
 
