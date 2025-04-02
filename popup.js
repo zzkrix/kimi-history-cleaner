@@ -55,7 +55,10 @@ document.addEventListener("DOMContentLoaded", async function () {
             });
 
             if (!isValidKimiTab(tab)) {
-                showStatus("请在 Kimi 的历史会话页面使用此插件", "error");
+                showStatus(
+                    `请在 <a href="https://kimi.ai" target="_blank">Kimi</a> 的历史会话页面使用此插件`,
+                    "error"
+                );
                 return;
             }
 
@@ -74,8 +77,8 @@ document.addEventListener("DOMContentLoaded", async function () {
                 throw new Error(response.error || "未知错误");
             }
 
-            showStatus("正在删除历史会话，请稍候...", "success");
-            setTimeout(() => window.close(), 1000);
+            showStatus("🧹正在执行清理，请稍候...", "success");
+            setTimeout(() => window.close(), 3000);
         } catch (error) {
             showStatus(`操作失败：${error.message}`, "error");
         }
@@ -87,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
 
     function showStatus(message, type) {
-        elements.statusDiv.textContent = message;
+        elements.statusDiv.innerHTML = message; // 使用 innerHTML 而不是 textContent
         elements.statusDiv.className = `status ${type}`;
         elements.statusDiv.style.display = "block";
     }
@@ -134,3 +137,21 @@ function parseDuration(range) {
     };
     return value * (multipliers[unit] || 0);
 }
+
+// 添加赞赏码折叠功能
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleDonationBtn = document.getElementById("toggleDonation");
+    const donationContent = document.getElementById("donationContent");
+
+    if (toggleDonationBtn && donationContent) {
+        toggleDonationBtn.addEventListener("click", function () {
+            if (donationContent.style.display === "none") {
+                donationContent.style.display = "block";
+                toggleDonationBtn.textContent = "点击隐藏赞赏码";
+            } else {
+                donationContent.style.display = "none";
+                toggleDonationBtn.textContent = "👍 点击支持作者";
+            }
+        });
+    }
+});

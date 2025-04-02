@@ -98,6 +98,37 @@
         </style>
     </head>
     <body>
+        <!-- 添加可折叠的赞赏码按钮 -->
+        <div style="text-align: center; margin-bottom: 16px">
+            <button
+                id="toggleDonation"
+                style="
+                    width: auto;
+                    margin-bottom: 10px;
+                    padding: 6px 12px;
+                    font-size: 13px;
+                    background-color: #f0f0f0;
+                    color: #555;
+                    border: 1px solid #ddd;
+                    box-shadow: none;
+                "
+            >
+                👍 点击支持作者
+            </button>
+            <div id="donationContent" style="display: none">
+                <img
+                    src="zs-mini.jpg"
+                    alt="赞赏码"
+                    style="
+                        width: 100px;
+                        height: 100px;
+                        border-radius: 50%;
+                        margin: 10px 0;
+                    "
+                />
+            </div>
+        </div>
+
         <div class="time-select">
             <select id="timeRange">
                 <option value="all">所有历史记录</option>
@@ -111,14 +142,14 @@
                 <option value="24h">最近 24 小时</option>
                 <option value="custom">自定义时间范围</option>
             </select>
-            <div id="customTime" class="custom-time" style="display: none;">
+            <div id="customTime" class="custom-time" style="display: none">
                 <div>
                     <label>开始时间：</label>
-                    <input type="datetime-local" id="startTime" step="60">
+                    <input type="datetime-local" id="startTime" step="60" />
                 </div>
-                <div style="margin-top: 5px;">
+                <div style="margin-top: 5px">
                     <label>结束时间：</label>
-                    <input type="datetime-local" id="endTime" step="60">
+                    <input type="datetime-local" id="endTime" step="60" />
                 </div>
             </div>
         </div>

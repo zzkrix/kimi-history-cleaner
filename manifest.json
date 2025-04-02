@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Kimi 历史会话清理器",
+    "name": "Kimi 历史会话清理助手",
     "version": "1.0.0",
     "description": "一键清理 Kimi AI 的历史会话记录",
     "icons": {

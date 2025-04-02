@@ -2,6 +2,17 @@
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.action === "clearAllHistory") {
         try {
+            // 先跳转到历史会话页面
+            const chatHistoryButton = document.querySelector(
+                ".chat-history button"
+            );
+            if (chatHistoryButton) {
+                chatHistoryButton.click();
+                console.log("找到 .chat-history button 元素");
+            } else {
+                console.warn("未找到 .chat-history button 元素");
+            }
+
             const headers = {
                 "Content-Type": "application/json",
             };
@@ -55,6 +66,12 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
                 // 添加适当的延迟，避免请求过于频繁
                 await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+
+            // 检查是否有历史记录
+            if (allItems.length === 0) {
+                alert("当前没有历史会话记录");
+                throw new Error("当前没有历史会话记录");
             }
 
             await deleteHistoryItems(
