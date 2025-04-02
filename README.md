@@ -13,7 +13,7 @@
 ### 插件市场
 
 - [x] [Chrome](https://chromewebstore.google.com/detail/kimi-%E5%8E%86%E5%8F%B2%E4%BC%9A%E8%AF%9D%E6%B8%85%E7%90%86%E5%99%A8/pjjimhcohddafofeloikfbpbbejkoiff?hl=zh-CN&utm_source=ext_sidebar)
-- [ ] Edge
+- [x] [Edge](https://microsoftedge.microsoft.com/addons/detail/kimi-%E5%8E%86%E5%8F%B2%E4%BC%9A%E8%AF%9D%E6%B8%85%E7%90%86%E5%99%A8/pgnnclhebjklcndnhejgknnmclpaoghn)
 
 ### 本地安装
 
