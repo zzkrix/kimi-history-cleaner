@@ -82,7 +82,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
             );
             sendResponse({ success: true });
         } catch (error) {
-            console.error("发生错误：", error);
+            console.log("发生错误：", error);
             sendResponse({ success: false, error: error.message });
         }
     }

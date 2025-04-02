@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (!isValidKimiTab(tab)) {
                 showStatus(
-                    `请在 <a href="https://kimi.ai" target="_blank">Kimi</a> 的历史会话页面使用此插件`,
+                    `请在 <a href="https://kimi.ai" target="_blank">kimi</a> 的历史会话页面使用此插件`,
                     "error"
                 );
                 return;

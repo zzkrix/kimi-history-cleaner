@@ -6,7 +6,12 @@
 
 - [x] 支持自定义时间段清理 kimi 历史会话记录。
 
-![example](./example.jpg)
+![example](./docs/unnamed.jpg)
+
+<div style="display: flex; gap: 0; justify-content: flex-start; align-items: flex-start;">
+    <img src="./docs/usage-1.jpg" style="width: 60%; margin: 0; padding: 0;">
+    <img src="./docs/usage-2.jpg" style="width: 60%; margin: 0; padding: 0;">
+</div>
 
 ## 安装
 
@@ -28,5 +33,5 @@
 ## 赞赏
 
 <div style="display: flex; gap: 0; justify-content: flex-start; align-items: flex-start;">
-    <img src="https://raw.githubusercontent.com/zzkrix/blog-images/main/assets/2025-03-31-13-09-gGyqMk.jpg" style="width: 30%; margin: 0; padding: 0;">
+    <img src="./zs-mini.jpg" style="width: 30%; margin: 0; padding: 0;">
 </div>
