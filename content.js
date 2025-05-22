@@ -2,34 +2,40 @@
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.action === "clearAllHistory") {
         try {
-            // 先跳转到历史会话页面
-            const chatHistoryButton = document.querySelector(
-                ".chat-history button"
-            );
-            if (chatHistoryButton) {
-                chatHistoryButton.click();
-                console.log("找到 .chat-history button 元素");
-            } else {
-                console.warn("未找到 .chat-history button 元素");
-            }
+            // // 先跳转到历史会话页面
+            // const chatHistoryButton = document.querySelector(
+            //     ".chat-history button"
+            // );
+            // if (chatHistoryButton) {
+            //     chatHistoryButton.click();
+            //     console.log("找到 .chat-history button 元素");
+            // } else {
+            //     console.warn("未找到 .chat-history button 元素");
+            // }
 
             const headers = {
                 "Content-Type": "application/json",
             };
 
-            // 如果有 cookies，添加认证信息
-            if (message.cookies && message.cookies.length > 0) {
-                const authToken = message.cookies.find(
-                    (c) => c.name === "kimi-auth"
-                );
-                if (!authToken) {
-                    throw new Error("未找到认证信息，请确保已登录");
-                }
-                headers["Authorization"] = `Bearer ${authToken.value}`;
-                headers["Cookie"] = message.cookies
-                    .map((c) => `${c.name}=${c.value}`)
-                    .join("; ");
+            // // 如果有 cookies，添加认证信息
+            // if (message.cookies && message.cookies.length > 0) {
+            //     const authToken = message.cookies.find(
+            //         (c) => c.name === "kimi-auth"
+            //     );
+            //     if (!authToken) {
+            //         throw new Error("未找到认证信息，请确保已登录");
+            //     }
+            //     headers["Authorization"] = `Bearer ${authToken.value}`;
+            //     headers["Cookie"] = message.cookies
+            //         .map((c) => `${c.name}=${c.value}`)
+            //         .join("; ");
+            // }
+
+            authToken = localStorage.getItem("access_token");
+            if (!authToken) {
+                throw new Error("未找到认证信息，请确保已登录");
             }
+            headers["Authorization"] = `Bearer ${authToken}`;
 
             // 循环获取所有历史记录
             let allItems = [];

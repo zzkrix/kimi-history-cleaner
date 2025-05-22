@@ -10,7 +10,7 @@
         "128": "icons/128.png"
     },
     "permissions": ["activeTab", "tabs", "cookies"],
-    "host_permissions": ["https://kimi.ai/*", "https://kimi.moonshot.cn/*", "https://kimi.com/*"],
+    "host_permissions": ["https://*/*"],
     "action": {
         "default_popup": "popup.html"
     },
@@ -19,7 +19,7 @@
     },
     "content_scripts": [
         {
-            "matches": ["https://kimi.ai/*", "https://kimi.moonshot.cn/*", "https://kimi.com/*"],
+            "matches": ["https://*/*"],
             "js": ["content.js"]
         }
     ]
