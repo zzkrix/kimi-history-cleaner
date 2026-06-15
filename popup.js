@@ -1,5 +1,4 @@
-document.addEventListener("DOMContentLoaded", async function () {
-    // 获取 DOM 元素
+document.addEventListener("DOMContentLoaded", function () {
     const elements = {
         timeRangeSelect: document.getElementById("timeRange"),
         customTimeDiv: document.getElementById("customTime"),
@@ -9,7 +8,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         endTimeInput: document.getElementById("endTime"),
     };
 
-    // 时间格式化函数
     const formatDateTime = (date) => {
         const pad = (num) => String(num).padStart(2, "0");
         return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
@@ -19,7 +17,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         )}`;
     };
 
-    // 处理时间范围选择变化
     const handleTimeRangeChange = () => {
         const selectedRange = elements.timeRangeSelect.value;
         elements.customTimeDiv.style.display =
@@ -42,12 +39,12 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     };
 
-    // 初始化事件监听
     elements.timeRangeSelect.addEventListener("change", handleTimeRangeChange);
     elements.clearButton.addEventListener("click", handleClearHistory);
 
-    // 清理历史记录处理函数
     async function handleClearHistory() {
+        elements.clearButton.disabled = true;
+
         try {
             const [tab] = await chrome.tabs.query({
                 active: true,
@@ -56,49 +53,74 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             if (!isValidKimiTab(tab)) {
                 showStatus(
-                    `请在 <a href="https://kimi.ai" target="_blank">kimi</a> 的历史会话页面使用此插件`,
+                    `请在 <a href="https://www.kimi.com" target="_blank">Kimi</a> 页面使用此插件`,
                     "error"
                 );
                 return;
             }
 
+            showStatus("正在清理历史会话，请稍候...", "success");
+
             const { startTime, endTime } = getTimeRange();
             const domain = new URL(tab.url).hostname;
-            const cookies = await chrome.cookies.getAll({ domain });
 
             const response = await chrome.tabs.sendMessage(tab.id, {
                 action: "clearAllHistory",
                 domain,
-                cookies,
                 timeRange: { startTime, endTime },
             });
 
-            if (response && !response.success) {
+            if (!response) {
+                throw new Error(
+                    "无法连接到页面脚本，请刷新 Kimi 页面后重试"
+                );
+            }
+
+            if (!response.success) {
                 throw new Error(response.error || "未知错误");
             }
 
-            showStatus("🧹正在执行清理，请稍候...", "success");
-            setTimeout(() => window.close(), 3000);
+            showStatus(
+                `清理完成，已删除 ${response.deletedCount || 0} 条会话`,
+                "success"
+            );
+            setTimeout(() => window.close(), 2000);
         } catch (error) {
             showStatus(`操作失败：${error.message}`, "error");
+        } finally {
+            elements.clearButton.disabled = false;
         }
     }
 
-    // 辅助函数
     function isValidKimiTab(tab) {
-        return tab && tab.url && tab.url.includes("kimi");
+        if (!tab || !tab.url) {
+            return false;
+        }
+
+        try {
+            const hostname = new URL(tab.url).hostname;
+            return (
+                hostname === "kimi.com" ||
+                hostname.endsWith(".kimi.com") ||
+                hostname === "kimi.ai" ||
+                hostname.endsWith(".kimi.ai") ||
+                hostname.endsWith(".moonshot.cn")
+            );
+        } catch (_error) {
+            return false;
+        }
     }
 
     function showStatus(message, type) {
-        elements.statusDiv.innerHTML = message; // 使用 innerHTML 而不是 textContent
+        elements.statusDiv.innerHTML = message;
         elements.statusDiv.className = `status ${type}`;
         elements.statusDiv.style.display = "block";
     }
 
     function getTimeRange() {
         const selectedRange = elements.timeRangeSelect.value;
-        let startTime = null,
-            endTime = null;
+        let startTime = null;
+        let endTime = null;
 
         if (selectedRange === "custom") {
             validateCustomTime();
@@ -116,10 +138,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         if (!elements.startTimeInput.value || !elements.endTimeInput.value) {
             throw new Error("请选择完整的时间范围");
         }
+
         const startTime = new Date(elements.startTimeInput.value).getTime();
         const endTime = new Date(elements.endTimeInput.value).getTime();
 
-        if (isNaN(startTime) || isNaN(endTime)) {
+        if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
             throw new Error("时间格式不正确");
         }
         if (startTime > endTime) {
@@ -129,7 +152,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 });
 
 function parseDuration(range) {
-    const value = parseInt(range);
+    const value = parseInt(range, 10);
     const unit = range.slice(-1);
     const multipliers = {
         m: 60 * 1000,
@@ -138,7 +161,6 @@ function parseDuration(range) {
     return value * (multipliers[unit] || 0);
 }
 
-// 添加赞赏码折叠功能
 document.addEventListener("DOMContentLoaded", function () {
     const toggleDonationBtn = document.getElementById("toggleDonation");
     const donationContent = document.getElementById("donationContent");

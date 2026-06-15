@@ -1,151 +1,383 @@
-// 监听来自 popup 的消息
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-    if (message.action === "clearAllHistory") {
-        try {
-            // // 先跳转到历史会话页面
-            // const chatHistoryButton = document.querySelector(
-            //     ".chat-history button"
-            // );
-            // if (chatHistoryButton) {
-            //     chatHistoryButton.click();
-            //     console.log("找到 .chat-history button 元素");
-            // } else {
-            //     console.warn("未找到 .chat-history button 元素");
-            // }
+const KIMI_API_BASE = "https://www.kimi.com";
+const LIST_CHATS_PATH = "/apiv2/kimi.chat.v1.ChatService/ListChats";
+const BATCH_DELETE_PATH =
+    "/apiv2/kimi.chat.v1.ChatService/BatchDeleteChats";
+const DELETE_CHATS_PATH = "/apiv2/kimi.chat.v1.ChatService/DeleteChats";
+const PAGE_SIZE = 50;
+const DELETE_BATCH_SIZE = 50;
+const LIST_DELAY_MS = 500;
+const DELETE_DELAY_MS = 300;
 
-            const headers = {
-                "Content-Type": "application/json",
-            };
+let cachedSessionId = null;
 
-            // // 如果有 cookies，添加认证信息
-            // if (message.cookies && message.cookies.length > 0) {
-            //     const authToken = message.cookies.find(
-            //         (c) => c.name === "kimi-auth"
-            //     );
-            //     if (!authToken) {
-            //         throw new Error("未找到认证信息，请确保已登录");
-            //     }
-            //     headers["Authorization"] = `Bearer ${authToken.value}`;
-            //     headers["Cookie"] = message.cookies
-            //         .map((c) => `${c.name}=${c.value}`)
-            //         .join("; ");
-            // }
-
-            authToken = localStorage.getItem("access_token");
-            if (!authToken) {
-                throw new Error("未找到认证信息，请确保已登录");
-            }
-            headers["Authorization"] = `Bearer ${authToken}`;
-
-            // 循环获取所有历史记录
-            let allItems = [];
-            let offset = 0;
-            const pageSize = 50;
-
-            while (true) {
-                const response = await fetch(
-                    `https://${message.domain}/api/chat/list`,
-                    {
-                        method: "POST",
-                        headers: headers,
-                        body: JSON.stringify({
-                            kimiplus_id: "",
-                            offset: offset,
-                            q: "",
-                            size: pageSize,
-                        }),
-                    }
-                );
-
-                const data = await response.json();
-
-                if (
-                    !data.items ||
-                    !Array.isArray(data.items) ||
-                    data.items.length === 0
-                ) {
-                    break;
-                }
-
-                allItems = allItems.concat(data.items);
-                offset += pageSize;
-
-                // 添加适当的延迟，避免请求过于频繁
-                await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-
-            // 检查是否有历史记录
-            if (allItems.length === 0) {
-                alert("当前没有历史会话记录");
-                throw new Error("当前没有历史会话记录");
-            }
-
-            await deleteHistoryItems(
-                message.domain,
-                headers,
-                allItems,
-                message.timeRange
-            );
-            sendResponse({ success: true });
-        } catch (error) {
-            console.log("发生错误：", error);
-            sendResponse({ success: false, error: error.message });
-        }
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.action !== "clearAllHistory") {
+        return false;
     }
+
+    clearAllHistory(message)
+        .then((result) => sendResponse({ success: true, ...result }))
+        .catch((error) => {
+            console.error("清理历史会话失败：", error);
+            sendResponse({ success: false, error: error.message });
+        });
+
     return true;
 });
 
-async function deleteHistoryItems(domain, headers, historyItems, timeRange) {
+async function clearAllHistory(message) {
+    const headers = await buildHeaders();
+    let chats = [];
+
     try {
-        // 根据时间范围过滤历史记录
-        let itemsToDelete = historyItems;
-        if (timeRange && (timeRange.startTime || timeRange.endTime)) {
-            itemsToDelete = historyItems.filter((item) => {
-                const itemTime = new Date(item.updated_at).getTime();
-                if (timeRange.startTime && itemTime < timeRange.startTime)
-                    return false;
-                if (timeRange.endTime && itemTime > timeRange.endTime)
-                    return false;
-                return true;
-            });
-        }
-
-        if (itemsToDelete.length === 0) {
-            throw new Error("在选定时间范围内未找到历史会话");
-        }
-
-        const statusIndicator = createStatusIndicator();
-        document.body.appendChild(statusIndicator);
-
-        let deletedCount = 0;
-        const totalItems = itemsToDelete.length;
-
-        for (const item of itemsToDelete) {
-            try {
-                const deleteResponse = await fetch(
-                    `https://${domain}/api/chat/${item.id}`,
-                    {
-                        method: "DELETE",
-                        headers: headers,
-                    }
-                );
-
-                if (deleteResponse.status === 200) {
-                    deletedCount++;
-                    updateStatus(statusIndicator, deletedCount, totalItems);
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 300));
-            } catch (error) {
-                console.error("删除单条记录时出错：", error);
-                continue;
-            }
-        }
-        showResult(statusIndicator, deletedCount, itemsToDelete.length);
+        chats = await listAllChats(headers);
     } catch (error) {
-        console.error("删除过程中发生错误：", error);
-        throw error;
+        if (!shouldTryLegacyApi(error)) {
+            throw error;
+        }
+        chats = await listAllChatsLegacy(message.domain, headers);
     }
+
+    if (chats.length === 0) {
+        throw new Error("当前没有历史会话记录");
+    }
+
+    const chatsToDelete = filterChatsByTimeRange(chats, message.timeRange);
+    if (chatsToDelete.length === 0) {
+        throw new Error("在选定时间范围内未找到历史会话");
+    }
+
+    const chatIds = chatsToDelete
+        .map(getChatId)
+        .filter(Boolean);
+
+    if (chatIds.length === 0) {
+        throw new Error("未找到可删除的会话 ID");
+    }
+
+    const statusIndicator = createStatusIndicator();
+    document.body.appendChild(statusIndicator);
+
+    const deletedCount = await deleteChats(
+        message.domain,
+        headers,
+        chatIds,
+        (current, total) => {
+            updateStatus(statusIndicator, current, total);
+        }
+    );
+
+    showResult(statusIndicator, deletedCount, chatIds.length);
+    return { deletedCount, totalCount: chatIds.length };
+}
+
+function shouldTryLegacyApi(error) {
+    const message = String(error?.message || error || "");
+    return /404|405|not found/i.test(message);
+}
+
+async function buildHeaders() {
+    const authToken = localStorage.getItem("access_token");
+    if (!authToken) {
+        throw new Error("未找到认证信息，请确保已登录");
+    }
+
+    const deviceId = getDeviceId();
+    const sessionId = getSessionId();
+
+    return {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Connect-Protocol-Version": "1",
+        Authorization: `Bearer ${authToken}`,
+        "X-Msh-Platform": "web",
+        "X-Msh-Device-Id": deviceId,
+        "X-Msh-Session-Id": sessionId,
+    };
+}
+
+function getDeviceId() {
+    const storageKeys = [
+        "device_id",
+        "deviceId",
+        "msh_device_id",
+        "x-msh-device-id",
+    ];
+
+    for (const key of storageKeys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value && /^\d{16,20}$/.test(value)) {
+            return value;
+        }
+    }
+
+    return readStoredExtensionValue("kimiDeviceId", generateDeviceId);
+}
+
+function getSessionId() {
+    if (cachedSessionId) {
+        return cachedSessionId;
+    }
+
+    const storageKeys = ["session_id", "sessionId", "msh_session_id"];
+    for (const key of storageKeys) {
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value && /^\d{16,20}$/.test(value)) {
+            cachedSessionId = value;
+            return cachedSessionId;
+        }
+    }
+
+    cachedSessionId = readStoredExtensionValue(
+        "kimiSessionId",
+        generateSessionId
+    );
+    return cachedSessionId;
+}
+
+function readStoredExtensionValue(storageKey, createValue) {
+    try {
+        const existing = localStorage.getItem(`__kimi_cleaner_${storageKey}`);
+        if (existing) {
+            return existing;
+        }
+
+        const value = createValue();
+        localStorage.setItem(`__kimi_cleaner_${storageKey}`, value);
+        return value;
+    } catch (_error) {
+        return createValue();
+    }
+}
+
+function generateNumericId(prefixDigit) {
+    let value = String(prefixDigit);
+    while (value.length < 19) {
+        value += Math.floor(Math.random() * 10);
+    }
+    return value;
+}
+
+function generateDeviceId() {
+    return generateNumericId(7);
+}
+
+function generateSessionId() {
+    let value = "17";
+    while (value.length < 19) {
+        value += Math.floor(Math.random() * 10);
+    }
+    return value;
+}
+
+async function listAllChats(headers) {
+    const allChats = [];
+    let pageToken = "";
+
+    while (true) {
+        const data = await apiPost(KIMI_API_BASE, LIST_CHATS_PATH, headers, {
+            query: "",
+            pageToken,
+            pageSize: PAGE_SIZE,
+        });
+
+        const chats = Array.isArray(data?.chats) ? data.chats : [];
+        allChats.push(...chats);
+
+        pageToken = data?.nextPageToken || "";
+        if (!pageToken || chats.length === 0) {
+            break;
+        }
+
+        await sleep(LIST_DELAY_MS);
+    }
+
+    return allChats;
+}
+
+async function listAllChatsLegacy(domain, headers) {
+    const allItems = [];
+    let offset = 0;
+
+    while (true) {
+        const response = await fetch(`https://${domain}/api/chat/list`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+                kimiplus_id: "",
+                offset,
+                q: "",
+                size: PAGE_SIZE,
+            }),
+        });
+
+        const data = await parseResponse(response);
+        const items = Array.isArray(data?.items) ? data.items : [];
+
+        if (items.length === 0) {
+            break;
+        }
+
+        allItems.push(...items);
+        offset += PAGE_SIZE;
+        await sleep(LIST_DELAY_MS);
+    }
+
+    return allItems;
+}
+
+async function deleteChats(domain, headers, chatIds, onProgress) {
+    let deletedCount = 0;
+
+    for (let index = 0; index < chatIds.length; index += DELETE_BATCH_SIZE) {
+        const batch = chatIds.slice(index, index + DELETE_BATCH_SIZE);
+
+        try {
+            await batchDeleteChats(headers, batch);
+            deletedCount += batch.length;
+        } catch (error) {
+            if (!shouldTryLegacyApi(error)) {
+                throw error;
+            }
+            deletedCount += await deleteChatsLegacy(
+                domain,
+                headers,
+                batch,
+                (current) => {
+                    onProgress(deletedCount + current, chatIds.length);
+                }
+            );
+        }
+
+        onProgress(deletedCount, chatIds.length);
+        await sleep(DELETE_DELAY_MS);
+    }
+
+    return deletedCount;
+}
+
+async function batchDeleteChats(headers, chatIds) {
+    try {
+        await apiPost(KIMI_API_BASE, BATCH_DELETE_PATH, headers, {
+            chatIds,
+        });
+    } catch (error) {
+        if (!shouldTryLegacyApi(error)) {
+            throw error;
+        }
+        await apiPost(KIMI_API_BASE, DELETE_CHATS_PATH, headers, { chatIds });
+    }
+}
+
+async function deleteChatsLegacy(domain, headers, chatIds, onProgress) {
+    let deletedCount = 0;
+
+    for (const chatId of chatIds) {
+        const response = await fetch(`https://${domain}/api/chat/${chatId}`, {
+            method: "DELETE",
+            headers,
+        });
+
+        if (response.ok || response.status === 204) {
+            deletedCount += 1;
+            onProgress(deletedCount);
+        }
+
+        await sleep(DELETE_DELAY_MS);
+    }
+
+    return deletedCount;
+}
+
+function filterChatsByTimeRange(chats, timeRange) {
+    if (!timeRange || (!timeRange.startTime && !timeRange.endTime)) {
+        return chats;
+    }
+
+    return chats.filter((chat) => {
+        const itemTime = getChatTimestamp(chat);
+        if (itemTime === null) {
+            return true;
+        }
+        if (timeRange.startTime && itemTime < timeRange.startTime) {
+            return false;
+        }
+        if (timeRange.endTime && itemTime > timeRange.endTime) {
+            return false;
+        }
+        return true;
+    });
+}
+
+function getChatId(chat) {
+    return chat.id || chat.chatId || chat.chat_id;
+}
+
+function getChatTimestamp(chat) {
+    const raw =
+        chat.updateTime ||
+        chat.createTime ||
+        chat.updated_at ||
+        chat.updatedAt ||
+        chat.lastMessage?.createTime;
+
+    if (raw === undefined || raw === null) {
+        return null;
+    }
+
+    if (typeof raw === "number") {
+        return raw > 1e12 ? raw : raw * 1000;
+    }
+
+    if (typeof raw === "string") {
+        const parsed = Date.parse(raw);
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (typeof raw === "object" && raw.seconds !== undefined) {
+        const seconds = Number(raw.seconds);
+        const nanos = Number(raw.nanos || 0);
+        return seconds * 1000 + Math.floor(nanos / 1e6);
+    }
+
+    return null;
+}
+
+async function apiPost(baseUrl, path, headers, body) {
+    const response = await fetch(`${baseUrl}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+    });
+
+    return parseResponse(response);
+}
+
+async function parseResponse(response) {
+    const text = await response.text();
+    let data = null;
+
+    if (text) {
+        try {
+            data = JSON.parse(text);
+        } catch (_error) {
+            data = null;
+        }
+    }
+
+    if (!response.ok) {
+        const detail =
+            (data && (data.message || data.error || data.code)) ||
+            text.slice(0, 200) ||
+            response.statusText;
+        throw new Error(`API 请求失败 (${response.status}): ${detail}`);
+    }
+
+    return data;
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function createStatusIndicator() {
